@@ -1,3 +1,7 @@
+To start server
+----
 iex -S mix
 
-telnet localhost, 6543
+To connect
+----
+telnet localhost, 6543 (Port can be changed in config.exs)

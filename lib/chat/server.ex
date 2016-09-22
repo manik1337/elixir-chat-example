@@ -36,8 +36,12 @@ defmodule Chat.Server do
     Process.link(pid)
     message_to_broadcast = "#{name} connected\n"
     u = user(name: name, pid: pid, socket: socket)
+
+    users_to_send = state(users: Enum.filter(state(users, :users), fn u -> user(u, :socket) != nil end))
+
+    broadcast(state(users_to_send, :users), message_to_broadcast)
+
     new_state = state(users: [u | state(users, :users)])
-    broadcast(state(new_state, :users), message_to_broadcast)
     IO.puts message_to_broadcast
     {:reply, :ok, new_state}
   end
@@ -45,9 +49,12 @@ defmodule Chat.Server do
   def handle_cast({:broadcast, message, pid}, users) do
     u = find_user(state(users, :users), pid)
     message_to_broadcast = "#{user(u, :name)} -> #{message}\n"
-    users_to_send = state(users: Enum.filter(state(users, :users), fn u -> user(u, :pid) != pid end))
+
+    users_to_send_condition = fn u -> user(u, :pid) != pid and user(u, :socket) != nil end
+    users_to_send = state(users: Enum.filter(state(users, :users), users_to_send_condition))
+
     case users_to_send do
-      {:state, [_]} ->
+      {:state, [_|_]} ->
         broadcast(state(users_to_send, :users), message_to_broadcast)
       _ ->
         nil
@@ -59,7 +66,12 @@ defmodule Chat.Server do
   def handle_info({:EXIT, from, _}, users) do
     name = user(find_user(state(users, :users), from), :name)
     message_to_broadcast = "#{name} has left\n"
-    broadcast(state(users, :users), message_to_broadcast)
+
+    users_to_send_condition = fn u -> user(u, :pid) != from and user(u, :socket) != nil end
+    users_to_send = state(users: Enum.filter(state(users, :users), users_to_send_condition))
+
+    broadcast(state(users_to_send, :users), message_to_broadcast)
+
     new_state = state(users: Enum.filter(state(users, :users), fn u -> user(u, :pid) != from end))
     IO.puts message_to_broadcast
     {:noreply, new_state}

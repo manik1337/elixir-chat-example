@@ -12,7 +12,6 @@ defmodule Chat.TcpSupervisor do
     children = [
       worker(Chat.TcpServer, [socket], name: Chat.TcpServer, restart: :temporary)
     ]
-
     supervise(children, strategy: :one_for_one)
   end
 end
